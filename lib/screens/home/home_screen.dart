@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../components/listing_card.dart';
 import 'listing_detail_screen.dart';
+import '../chat/chat_list_screen.dart'; // 👈 Import the ChatListScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -48,22 +49,28 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.black,
         elevation: 0,
         surfaceTintColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.message, color: Colors.white),
+            tooltip: 'Chats',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatListScreen()),
+              );
+            },
+          )
+        ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _listingsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.purple),
-            );
+            return const Center(child: CircularProgressIndicator(color: Colors.purple));
           } else if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red)),
-            );
+            return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red)));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text('No listings found.', style: TextStyle(color: Colors.white)),
-            );
+            return const Center(child: Text('No listings found.', style: TextStyle(color: Colors.white)));
           }
 
           final listings = snapshot.data!;
@@ -72,10 +79,11 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: listings.length,
             itemBuilder: (context, index) {
               final listing = listings[index];
-              final images = (listing['images'] ?? []) as List<dynamic>;
+              final images = listing['images'] ?? [];
               final isFavorite = listing['is_favorite'] ?? false;
               final listingId = listing['id'];
               final userId = listing['user_id'];
+              final userEmail = listing['user_email'] ?? '';
 
               return ListingCard(
                 title: listing['title'] ?? '',
@@ -95,9 +103,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         rent: listing['rent']?.toString() ?? '',
                         availableFrom: listing['available_from'] ?? '',
                         description: listing['description'] ?? '',
-                        gender: listing['gender'] ?? 'Any',
+                        gender: listing['gender'] ?? '',
                         images: images,
                         userId: userId,
+                        userEmail: userEmail,
                       ),
                     ),
                   );
