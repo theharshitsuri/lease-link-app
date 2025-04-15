@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as path;
 
 class EditListingScreen extends StatefulWidget {
   final String listingId;
@@ -35,9 +38,13 @@ class _EditListingScreenState extends State<EditListingScreen> {
   late TextEditingController _rentController;
   late TextEditingController _descriptionController;
 
-  late String _genderPref;
+  List<dynamic> _existingImages = [];
+  List<File> _newImages = [];
+  String _genderPref = 'Any';
   DateTime? _availableDate;
   bool _isSaving = false;
+
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -48,6 +55,39 @@ class _EditListingScreenState extends State<EditListingScreen> {
     _descriptionController = TextEditingController(text: widget.description);
     _genderPref = widget.gender;
     _availableDate = DateFormat.yMMMMd().parse(widget.availableFrom);
+    fetchExistingImages();
+  }
+
+  Future<void> fetchExistingImages() async {
+    final response = await supabase
+        .from('listings')
+        .select('images')
+        .eq('id', widget.listingId)
+        .single();
+
+    setState(() {
+      _existingImages = response['images'] ?? [];
+    });
+  }
+
+  Future<List<String>> _uploadNewImages(List<File> files) async {
+    final urls = <String>[];
+    for (final image in files) {
+      final fileExt = path.extension(image.path);
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}$fileExt';
+      final filePath = fileName;
+
+      final bytes = await image.readAsBytes();
+      await Supabase.instance.client.storage
+          .from('listing-images')
+          .uploadBinary(filePath, bytes, fileOptions: const FileOptions(upsert: true));
+
+      final imageUrl = Supabase.instance.client.storage
+          .from('listing-images')
+          .getPublicUrl(filePath);
+      urls.add(imageUrl);
+    }
+    return urls;
   }
 
   Future<void> _updateListing() async {
@@ -56,6 +96,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
     setState(() => _isSaving = true);
 
     try {
+      List<String> uploadedNew = await _uploadNewImages(_newImages);
+
+      final allImages = [..._existingImages, ...uploadedNew];
+
       await supabase.from('listings').update({
         'title': _titleController.text.trim(),
         'location': _locationController.text.trim(),
@@ -63,12 +107,15 @@ class _EditListingScreenState extends State<EditListingScreen> {
         'description': _descriptionController.text.trim(),
         'gender': _genderPref,
         'available_from': DateFormat.yMMMMd().format(_availableDate!),
+        'images': allImages,
       }).eq('id', widget.listingId);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Listing updated successfully!')),
-      );
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Listing updated successfully!')),
+        );
+        Navigator.pop(context);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
@@ -78,6 +125,27 @@ class _EditListingScreenState extends State<EditListingScreen> {
     }
   }
 
+  Future<void> _pickNewImages() async {
+    final picked = await _picker.pickMultiImage();
+    if (picked.isNotEmpty) {
+      setState(() {
+        _newImages.addAll(picked.map((x) => File(x.path)));
+      });
+    }
+  }
+
+  void _removeExistingImage(int index) {
+    setState(() {
+      _existingImages.removeAt(index);
+    });
+  }
+
+  void _removeNewImage(int index) {
+    setState(() {
+      _newImages.removeAt(index);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,7 +153,6 @@ class _EditListingScreenState extends State<EditListingScreen> {
       appBar: AppBar(
         title: const Text('Edit Listing'),
         backgroundColor: Colors.black,
-        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -93,23 +160,106 @@ class _EditListingScreenState extends State<EditListingScreen> {
           key: _formKey,
           child: Column(
             children: [
+              if (_existingImages.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Existing Images', style: TextStyle(color: Colors.white)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 100,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _existingImages.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          return Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  _existingImages[index],
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.red),
+                                  onPressed: () => _removeExistingImage(index),
+                                ),
+                              )
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              if (_newImages.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('New Images', style: TextStyle(color: Colors.white)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 100,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _newImages.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          return Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  _newImages[index],
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.red),
+                                  onPressed: () => _removeNewImage(index),
+                                ),
+                              )
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ElevatedButton(
+                onPressed: _pickNewImages,
+                child: const Text('Add New Images'),
+              ),
+              const SizedBox(height: 20),
               _buildTextField(_titleController, 'Title'),
               _buildTextField(_rentController, 'Rent (\$)', keyboardType: TextInputType.number),
               _buildTextField(_locationController, 'Location'),
               _buildTextField(_descriptionController, 'Description', maxLines: 4),
-
               DropdownButtonFormField<String>(
                 dropdownColor: Colors.black,
                 value: _genderPref,
+                decoration: _inputDecoration('Gender Preference'),
                 items: ['Any', 'Male', 'Female']
                     .map((g) => DropdownMenuItem(value: g, child: Text(g)))
                     .toList(),
                 onChanged: (val) => setState(() => _genderPref = val!),
-                decoration: const InputDecoration(labelText: 'Gender Preference'),
                 style: const TextStyle(color: Colors.white),
               ),
-
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               ElevatedButton(
                 onPressed: () async {
                   DateTime? picked = await showDatePicker(
@@ -139,8 +289,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                 ),
                 child: _isSaving
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Update Listing',
-                        style: TextStyle(fontSize: 18, color: Colors.white)),
+                    : const Text('Update Listing', style: TextStyle(fontSize: 18, color: Colors.white)),
               ),
             ],
           ),
@@ -158,19 +307,24 @@ class _EditListingScreenState extends State<EditListingScreen> {
         keyboardType: keyboardType,
         maxLines: maxLines,
         style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.white30)),
-          focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.purple)),
-        ),
-        validator: (val) =>
-            val == null || val.trim().isEmpty ? 'Required' : null,
+        decoration: _inputDecoration(label),
+        validator: (val) => val == null || val.trim().isEmpty ? 'Required' : null,
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white70),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.white30),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.purple),
       ),
     );
   }
