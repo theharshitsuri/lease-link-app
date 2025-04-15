@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
+import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:google_places_flutter/model/prediction.dart';
 
 class AddListingScreen extends StatefulWidget {
   const AddListingScreen({super.key});
@@ -18,6 +20,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final _rentController = TextEditingController();
   final _locationController = TextEditingController();
   final _descController = TextEditingController();
+  final _locationFocus = FocusNode();
 
   String _genderPref = 'Any';
   DateTime? _availableDate;
@@ -25,6 +28,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   List<File> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
+
+  String? _fullAddress;
+  double? _latitude;
+  double? _longitude;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _rentController.dispose();
+    _locationController.dispose();
+    _descController.dispose();
+    _locationFocus.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImages() async {
     final List<XFile> images = await _picker.pickMultiImage();
@@ -56,9 +73,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   Future<void> _submitListing() async {
-    if (!_formKey.currentState!.validate() || _availableDate == null) {
+    if (!_formKey.currentState!.validate() || _availableDate == null || _latitude == null || _longitude == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete all fields.')),
+        const SnackBar(content: Text('Please complete all fields including location.')),
       );
       return;
     }
@@ -73,7 +90,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
       await Supabase.instance.client.from('listings').insert({
         'title': _titleController.text.trim(),
-        'location': _locationController.text.trim(),
+        'location': _fullAddress ?? _locationController.text.trim(),
+        'latitude': _latitude,
+        'longitude': _longitude,
         'rent': double.parse(_rentController.text.trim()),
         'description': _descController.text.trim(),
         'gender': _genderPref,
@@ -98,93 +117,121 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('Add Listing'),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
         backgroundColor: Colors.black,
-        elevation: 0,
-        surfaceTintColor: Colors.black,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              GestureDetector(
-                onTap: _pickImages,
-                child: Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[900],
-                    borderRadius: BorderRadius.circular(12),
-                    image: _selectedImages.isNotEmpty
-                        ? DecorationImage(
-                            image: FileImage(_selectedImages.first),
-                            fit: BoxFit.cover,
+        appBar: AppBar(
+          title: const Text('Add Listing'),
+          backgroundColor: Colors.black,
+          elevation: 0,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTap: _pickImages,
+                  child: Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[900],
+                      borderRadius: BorderRadius.circular(12),
+                      image: _selectedImages.isNotEmpty
+                          ? DecorationImage(
+                              image: FileImage(_selectedImages.first),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: _selectedImages.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Tap to upload images',
+                              style: TextStyle(color: Colors.grey),
+                            ),
                           )
                         : null,
                   ),
-                  child: _selectedImages.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Tap to upload images',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        )
-                      : null,
                 ),
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(_titleController, 'Title'),
-              _buildTextField(_rentController, 'Rent (\$)', keyboardType: TextInputType.number),
-              _buildTextField(_locationController, 'Location'),
-              _buildTextField(_descController, 'Description', keyboardType: TextInputType.text, maxLines: 4),
-              DropdownButtonFormField<String>(
-                dropdownColor: const Color.fromARGB(255, 0, 0, 0),
-                value: _genderPref,
-                items: ['Any', 'Male', 'Female']
-                    .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-                    .toList(),
-                onChanged: (value) => setState(() => _genderPref = value!),
-                decoration: const InputDecoration(labelText: 'Gender Preference'),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () async {
-                  DateTime? picked = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2024),
-                    lastDate: DateTime(2026),
-                  );
-                  if (picked != null) {
-                    setState(() => _availableDate = picked);
-                  }
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-                child: Text(
-                  _availableDate == null
-                      ? 'Select Available From Date'
-                      : 'Available From: ${DateFormat.yMMMMd().format(_availableDate!)}',
-                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                const SizedBox(height: 16),
+
+                _buildTextField(_titleController, 'Title'),
+                _buildTextField(_rentController, 'Rent (\$)', keyboardType: TextInputType.number),
+
+                GooglePlaceAutoCompleteTextField(
+                  textEditingController: _locationController,
+                  focusNode: _locationFocus,
+                  googleAPIKey: "AIzaSyAhxj35WP_-sm_0C23hcQNYS5BqmNl09Cw",
+                  inputDecoration: _inputDecoration('Location'),
+                  debounceTime: 400,
+                  isLatLngRequired: true,
+                  getPlaceDetailWithLatLng: (Prediction prediction) {
+                    _fullAddress = prediction.description;
+                    _latitude = double.tryParse(prediction.lat ?? '');
+                    _longitude = double.tryParse(prediction.lng ?? '');
+                    _locationController.text = prediction.description ?? '';
+                    _locationFocus.unfocus(); // fix keyboard glitch
+                  },
+                  itemClick: (Prediction prediction) {
+                    _locationController.text = prediction.description ?? '';
+                    _locationFocus.unfocus();
+                  },
+                  seperatedBuilder: const Divider(height: 1, color: Colors.grey),
                 ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _submitListing,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+
+                const SizedBox(height: 12),
+                _buildTextField(_descController, 'Description', maxLines: 4),
+
+                DropdownButtonFormField<String>(
+                  dropdownColor: Colors.black,
+                  value: _genderPref,
+                  items: ['Any', 'Male', 'Female']
+                      .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                      .toList(),
+                  onChanged: (value) => setState(() => _genderPref = value!),
+                  decoration: _inputDecoration('Gender Preference'),
+                  style: const TextStyle(color: Colors.white),
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Submit Listing', style: TextStyle(fontSize: 18, color: Colors.white)),
-              )
-            ],
+
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () async {
+                    DateTime? picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2024),
+                      lastDate: DateTime(2026),
+                    );
+                    if (picked != null) {
+                      setState(() => _availableDate = picked);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+                  child: Text(
+                    _availableDate == null
+                        ? 'Select Available From Date'
+                        : 'Available From: ${DateFormat.yMMMMd().format(_availableDate!)}',
+                    style: const TextStyle(fontSize: 16, color: Colors.white),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _submitListing,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Submit Listing', style: TextStyle(fontSize: 18, color: Colors.white)),
+                )
+              ],
+            ),
           ),
         ),
       ),
@@ -200,23 +247,27 @@ class _AddListingScreenState extends State<AddListingScreen> {
         keyboardType: keyboardType,
         maxLines: maxLines,
         style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.white70),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.white30),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.purple),
-          ),
-        ),
+        decoration: _inputDecoration(label),
         validator: (val) => val == null || val.trim().isEmpty ? 'Required' : null,
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white70),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.white70),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.white30),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.purple),
       ),
     );
   }

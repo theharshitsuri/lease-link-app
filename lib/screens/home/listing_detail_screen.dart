@@ -1,3 +1,4 @@
+// Keep all your existing imports
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'edit_listing_screen.dart';
@@ -46,7 +47,28 @@ class ListingDetailScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            if (images.isNotEmpty)
+            if (images.isEmpty)
+              Container(
+                height: 250,
+                color: Colors.grey[800],
+                child: const Center(
+                  child: Icon(Icons.image, color: Colors.grey, size: 60),
+                ),
+              )
+            else if (images.length == 1)
+              Container(
+                height: 250,
+                width: double.infinity,
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(
+                    image: NetworkImage(images.first),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              )
+            else
               SizedBox(
                 height: 250,
                 child: ListView.separated(
@@ -69,16 +91,9 @@ class ListingDetailScreen extends StatelessWidget {
                     );
                   },
                 ),
-              )
-            else
-              Container(
-                height: 250,
-                color: Colors.grey[800],
-                child: const Center(
-                  child: Icon(Icons.image, color: Colors.grey, size: 60),
-                ),
               ),
 
+            // Listing Details
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -96,6 +111,7 @@ class ListingDetailScreen extends StatelessWidget {
                   Text(description, style: const TextStyle(color: Colors.white)),
                   const SizedBox(height: 24),
 
+                  // Action Buttons
                   if (isMyListing)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -156,7 +172,6 @@ class ListingDetailScreen extends StatelessWidget {
 
                           if (existingChat != null) {
                             chatId = existingChat['id'];
-                            // Get the other user's email from the row if available
                             otherEmail = currentUserId == existingChat['user1_id']
                                 ? existingChat['user2_email'] ?? otherEmail
                                 : existingChat['user1_email'] ?? otherEmail;

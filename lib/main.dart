@@ -4,6 +4,7 @@ import 'screens/auth/welcome_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/main_nav_screen.dart';
+import 'screens/auth/profile_setup_screen.dart'; // 👈 Add this import
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -30,13 +31,26 @@ class _LeaseLinkAppState extends State<LeaseLinkApp> {
   void initState() {
     super.initState();
 
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       final event = data.event;
 
       if (event == AuthChangeEvent.signedOut || event == AuthChangeEvent.userDeleted) {
         navigatorKey.currentState?.pushNamedAndRemoveUntil('/', (route) => false);
       } else if (event == AuthChangeEvent.signedIn) {
-        navigatorKey.currentState?.pushNamedAndRemoveUntil('/home', (route) => false);
+        final userId = Supabase.instance.client.auth.currentUser?.id;
+        if (userId == null) return;
+
+        final profile = await Supabase.instance.client
+            .from('profiles')
+            .select()
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (profile == null) {
+          navigatorKey.currentState?.pushNamedAndRemoveUntil('/setup', (route) => false);
+        } else {
+          navigatorKey.currentState?.pushNamedAndRemoveUntil('/home', (route) => false);
+        }
       }
     });
   }
@@ -54,8 +68,8 @@ class _LeaseLinkAppState extends State<LeaseLinkApp> {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const MainNavScreen(),
+        '/setup': (context) => const ProfileSetupScreen(), // 👈 Add this route
       },
     );
   }
 }
-

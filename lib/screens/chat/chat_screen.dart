@@ -29,6 +29,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     fetchMessages();
     _subscribeToMessages();
+    markMessagesAsRead(); // 👈 Mark as read on open
   }
 
   Future<void> fetchMessages() async {
@@ -46,6 +47,17 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
+  Future<void> markMessagesAsRead() async {
+    final currentUserId = supabase.auth.currentUser?.id;
+    if (currentUserId == null) return;
+
+    await supabase.from('messages')
+      .update({'read': true})
+      .eq('chat_id', widget.chatId)  
+      .neq('sender_id', currentUserId)
+      .eq('read', false);
+  }
+
   void _subscribeToMessages() {
     _channel = supabase.channel('messages:${widget.chatId}');
 
@@ -57,7 +69,6 @@ class _ChatScreenState extends State<ChatScreen> {
           setState(() {
             _messages.add(payload['new']);
           });
-
           _scrollToBottom();
         }
       },
@@ -72,6 +83,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'chat_id': widget.chatId,
       'sender_id': senderId,
       'content': text.trim(),
+      'read': false,
     });
 
     _controller.clear();
@@ -110,15 +122,21 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(widget.otherUserEmail, style: const TextStyle(fontWeight: FontWeight.w500)),
         backgroundColor: Colors.black,
         elevation: 0.5,
+        surfaceTintColor: Colors.black,
       ),
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: ListView.builder(
+                reverse: true,
                 controller: _scrollController,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 itemCount: _messages.length,
@@ -139,9 +157,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Column(
-                        crossAxisAlignment: isMine
-                            ? CrossAxisAlignment.end
-                            : CrossAxisAlignment.start,
+                        crossAxisAlignment:
+                            isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),

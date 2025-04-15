@@ -5,7 +5,7 @@ class ListingCard extends StatefulWidget {
   final String location;
   final String rent;
   final String availableFrom;
-  final List<dynamic> images; // ⬅️ Supabase text[]
+  final List<dynamic> images;
   final bool isFavorite;
   final VoidCallback onTap;
   final VoidCallback onFavoriteToggle;
@@ -42,6 +42,14 @@ class _ListingCardState extends State<ListingCard> {
   }
 
   @override
+  void didUpdateWidget(covariant ListingCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.images != widget.images) {
+      _currentImageIndex = 0;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final currentImage = widget.images.isNotEmpty
         ? widget.images[_currentImageIndex].toString()
@@ -60,7 +68,7 @@ class _ListingCardState extends State<ListingCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🖼️ Image with Arrows and Heart
+            // 🖼️ Image preview + Favorite button + Arrows
             Stack(
               children: [
                 Container(
@@ -80,6 +88,8 @@ class _ListingCardState extends State<ListingCard> {
                       ? const Center(child: Icon(Icons.image, size: 60, color: Colors.white30))
                       : null,
                 ),
+
+                // ← and → Arrows
                 if (widget.images.length > 1)
                   Positioned(
                     left: 8,
@@ -102,22 +112,26 @@ class _ListingCardState extends State<ListingCard> {
                       splashRadius: 24,
                     ),
                   ),
+
+                // ❤️ Favorite toggle
                 Positioned(
                   top: 12,
                   right: 12,
-                  child: GestureDetector(
-                    onTap: widget.onFavoriteToggle,
-                    child: Icon(
+                  child: IconButton(
+                    icon: Icon(
                       widget.isFavorite ? Icons.favorite : Icons.favorite_border,
                       color: widget.isFavorite ? Colors.redAccent : Colors.white70,
-                      size: 28,
                     ),
+                    iconSize: 28,
+                    onPressed: widget.onFavoriteToggle,
+                    splashRadius: 20,
+                    tooltip: widget.isFavorite ? 'Remove Favorite' : 'Add to Favorites',
                   ),
                 ),
               ],
             ),
 
-            // 📝 Info
+            // 📝 Listing Info
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

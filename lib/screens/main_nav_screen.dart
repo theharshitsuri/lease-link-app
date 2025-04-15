@@ -54,7 +54,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorites',
-          ),
+        ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',

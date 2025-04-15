@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../main_nav_screen.dart';
+import 'profile_setup_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -36,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (response.user != null && mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const MainNavScreen()),
+          MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

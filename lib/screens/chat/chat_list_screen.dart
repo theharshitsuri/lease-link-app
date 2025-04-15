@@ -12,6 +12,8 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   final supabase = Supabase.instance.client;
   late Future<List<Map<String, dynamic>>> _chatFuture;
+  Map<String, int> _unreadCounts = {};
+  Map<String, Map<String, dynamic>> _userProfiles = {};
 
   @override
   void initState() {
@@ -28,13 +30,47 @@ class _ChatListScreenState extends State<ChatListScreen> {
         .select()
         .or('user1_id.eq.${currentUser.id},user2_id.eq.${currentUser.id}');
 
-    return List<Map<String, dynamic>>.from(response);
-  }
+    final chats = List<Map<String, dynamic>>.from(response);
 
-  String getOtherUserEmail(Map<String, dynamic> chat, String currentUserId) {
-    return chat['user1_id'] == currentUserId
-        ? chat['user2_email'] ?? 'User'
-        : chat['user1_email'] ?? 'User';
+    // Get unread message counts
+    final unreadResponse = await supabase
+        .from('messages')
+        .select()
+        .eq('read', false)
+        .neq('sender_id', currentUser.id);
+
+    final unreadMessages = List<Map<String, dynamic>>.from(unreadResponse);
+    final unreadCountMap = <String, int>{};
+
+    for (var msg in unreadMessages) {
+      final chatId = msg['chat_id'];
+      unreadCountMap[chatId] = (unreadCountMap[chatId] ?? 0) + 1;
+    }
+
+    // Get profile info of chat partners
+    for (var chat in chats) {
+      final otherUserId = chat['user1_id'] == currentUser.id
+          ? chat['user2_id']
+          : chat['user1_id'];
+
+      if (!_userProfiles.containsKey(otherUserId)) {
+        final profileResponse = await supabase
+            .from('profiles')
+            .select()
+            .eq('id', otherUserId)
+            .maybeSingle();
+
+        if (profileResponse != null) {
+          _userProfiles[otherUserId] = profileResponse;
+        }
+      }
+    }
+
+    setState(() {
+      _unreadCounts = unreadCountMap;
+    });
+
+    return chats;
   }
 
   @override
@@ -66,31 +102,69 @@ class _ChatListScreenState extends State<ChatListScreen> {
             separatorBuilder: (_, __) => Divider(color: Colors.white10, height: 1),
             itemBuilder: (context, index) {
               final chat = chats[index];
-              final otherEmail = getOtherUserEmail(chat, currentUserId);
-              final initial = otherEmail.isNotEmpty ? otherEmail[0].toUpperCase() : '?';
+              final otherUserId = chat['user1_id'] == currentUserId
+                  ? chat['user2_id']
+                  : chat['user1_id'];
+              final otherProfile = _userProfiles[otherUserId];
+              final otherName = otherProfile?['name'] ?? 'User';
+              final profileImage = otherProfile?['profile_image_url'];
+              final chatId = chat['id'];
+              final unreadCount = _unreadCounts[chatId] ?? 0;
 
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                leading: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.purple,
-                  child: Text(initial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                leading: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.purple,
+                      backgroundImage: profileImage != null ? NetworkImage(profileImage) : null,
+                      child: profileImage == null
+                          ? Text(
+                              otherName[0].toUpperCase(),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            )
+                          : null,
+                    ),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text('$unreadCount', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                        ),
+                      )
+                  ],
                 ),
                 title: Text(
-                  otherEmail,
+                  otherName,
                   style: const TextStyle(color: Colors.white, fontSize: 16),
                 ),
                 trailing: const Icon(Icons.chevron_right, color: Colors.white38),
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  await supabase
+                      .from('messages')
+                      .update({'read': true})
+                      .eq('chat_id', chatId)
+                      .neq('sender_id', currentUserId);
+
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => ChatScreen(
-                        chatId: chat['id'].toString(),
-                        otherUserEmail: otherEmail,
+                        chatId: chatId,
+                        otherUserEmail: otherProfile?['name'] ?? 'User',
                       ),
                     ),
                   );
+
+                  setState(() {
+                    _chatFuture = fetchChats();
+                  });
                 },
               );
             },
