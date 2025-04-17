@@ -51,9 +51,8 @@ class _ListingCardState extends State<ListingCard> {
 
   @override
   Widget build(BuildContext context) {
-    final currentImage = widget.images.isNotEmpty
-        ? widget.images[_currentImageIndex].toString()
-        : '';
+    final hasImages = widget.images.isNotEmpty;
+    final currentImage = hasImages ? widget.images[_currentImageIndex].toString() : '';
 
     return InkWell(
       onTap: widget.onTap,
@@ -68,29 +67,41 @@ class _ListingCardState extends State<ListingCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🖼️ Image preview + Favorite button + Arrows
             Stack(
               children: [
+                // 📷 Image section
                 Container(
                   height: 180,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.grey[800],
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    image: currentImage.isNotEmpty
+                    image: hasImages
                         ? DecorationImage(
                             image: NetworkImage(currentImage),
                             fit: BoxFit.cover,
                           )
                         : null,
                   ),
-                  child: currentImage.isEmpty
-                      ? const Center(child: Icon(Icons.image, size: 60, color: Colors.white30))
+                  child: !hasImages
+                      ? const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.image_not_supported, size: 48, color: Colors.white30),
+                              SizedBox(height: 8),
+                              Text(
+                                'No photos available',
+                                style: TextStyle(color: Colors.white54, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        )
                       : null,
                 ),
 
-                // ← and → Arrows
-                if (widget.images.length > 1)
+                // ⬅️ Prev
+                if (hasImages && widget.images.length > 1)
                   Positioned(
                     left: 8,
                     top: 75,
@@ -101,7 +112,9 @@ class _ListingCardState extends State<ListingCard> {
                       splashRadius: 24,
                     ),
                   ),
-                if (widget.images.length > 1)
+
+                // ➡️ Next
+                if (hasImages && widget.images.length > 1)
                   Positioned(
                     right: 8,
                     top: 75,
@@ -131,7 +144,7 @@ class _ListingCardState extends State<ListingCard> {
               ],
             ),
 
-            // 📝 Listing Info
+            // 📄 Listing Info
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

@@ -47,12 +47,25 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message)),
       );
-    } catch (e) {
+    } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Something went wrong")),
       );
     } finally {
       setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> loginWithGoogle() async {
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        Provider.google,
+        redirectTo: 'io.supabase.leaselink://login-callback',
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Google Sign-In failed: $e")),
+      );
     }
   }
 
@@ -66,11 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.house_rounded,
-                size: 100,
-                color: Colors.purple,
-              ),
+              const Icon(Icons.house_rounded, size: 100, color: Colors.purple),
               const SizedBox(height: 10),
               const Text(
                 "LeaseLink",
@@ -84,14 +93,10 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 30),
               const Text(
                 "Welcome back",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  fontFamily: 'Montserrat',
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               const SizedBox(height: 30),
+
               TextField(
                 controller: emailController,
                 style: const TextStyle(color: Colors.white),
@@ -100,12 +105,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelStyle: const TextStyle(color: Colors.white70),
                   filled: true,
                   fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.purple),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
+
               TextField(
                 controller: passwordController,
                 obscureText: true,
@@ -115,37 +123,62 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelStyle: const TextStyle(color: Colors.white70),
                   filled: true,
                   fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.purple),
                   ),
                 ),
               ),
               const SizedBox(height: 30),
+
               ElevatedButton(
                 onPressed: isLoading ? null : loginUser,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.purple,
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text("Login", style: TextStyle(color: Colors.white)),
               ),
               const SizedBox(height: 20),
+
+              // Google Sign-In Button
+              OutlinedButton(
+                onPressed: loginWithGoogle,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/google.png', // ✅ Add this image
+                      height: 22,
+                      width: 22,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      "Continue with Google",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    "Don't have an account?",
-                    style: TextStyle(color: Colors.white70),
-                  ),
+                  const Text("Don't have an account?", style: TextStyle(color: Colors.white70)),
                   TextButton(
-                    onPressed: () {
-                    Navigator.pushReplacementNamed(context, '/register');
-                    },
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/register'),
                     child: const Text("Register here"),
                   ),
                 ],

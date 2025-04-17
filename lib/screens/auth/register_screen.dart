@@ -56,6 +56,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Future<void> registerWithGoogle() async {
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        Provider.google,
+        redirectTo: 'io.supabase.leaselink://login-callback',
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Google Sign-In failed: $e")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,11 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.house_rounded,
-                size: 100,
-                color: Colors.purple,
-              ),
+              const Icon(Icons.house_rounded, size: 100, color: Colors.purple),
               const SizedBox(height: 10),
               const Text(
                 "LeaseLink",
@@ -84,12 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 30),
               const Text(
                 "Create an account",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  fontFamily: 'Montserrat',
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               const SizedBox(height: 30),
               TextField(
@@ -100,8 +104,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   labelStyle: const TextStyle(color: Colors.white70),
                   filled: true,
                   fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.purple),
                   ),
                 ),
               ),
@@ -115,8 +121,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   labelStyle: const TextStyle(color: Colors.white70),
                   filled: true,
                   fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.purple),
                   ),
                 ),
               ),
@@ -126,22 +134,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.purple,
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text("Sign Up", style: TextStyle(color: Colors.white)),
               ),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: registerWithGoogle,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/google.png',
+                      height: 22,
+                      width: 22,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      "Continue with Google",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    "Already have an account?",
-                    style: TextStyle(color: Colors.white70),
-                  ),
+                  const Text("Already have an account?", style: TextStyle(color: Colors.white70)),
                   TextButton(
                     onPressed: () {
                       Navigator.pushReplacementNamed(context, '/login');

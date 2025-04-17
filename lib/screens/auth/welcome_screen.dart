@@ -42,7 +42,7 @@ class WelcomeScreen extends StatelessWidget {
               const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: () {
-                  navigatorKey.currentState?.pushNamed('/login'); 
+                  navigatorKey.currentState?.pushNamed('/register'); 
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.purple,

@@ -146,6 +146,14 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.black,
         elevation: 0,
         surfaceTintColor: Colors.black,
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 16),
+          child: Icon(
+            Icons.house_rounded,
+            size: 36, 
+            color: Colors.purple,
+          ),
+        ), 
         actions: [
           IconButton(
             icon: const Icon(Icons.message, color: Colors.white),
