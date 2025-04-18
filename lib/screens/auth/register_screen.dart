@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'profile_setup_screen.dart';
+import 'email_verification_screen.dart'; // ⬅️ make sure to import this
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -33,21 +33,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: password,
       );
 
-      if (response.user != null && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
-        );
+      if (response.session == null) {
+        // Requires email confirmation
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EmailVerificationScreen(email: email),
+            ),
+          );
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Registration failed")),
-        );
+        // Email already confirmed or no confirmation required
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/setup');
+        }
       }
     } on AuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
-    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Something went wrong")),
       );
@@ -81,15 +85,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               const Icon(Icons.house_rounded, size: 100, color: Colors.purple),
               const SizedBox(height: 10),
-              const Text(
-                "LeaseLink",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Montserrat',
-                  color: Colors.white,
-                ),
-              ),
+              const Text("LeaseLink",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Montserrat',
+                    color: Colors.white,
+                  )),
               const SizedBox(height: 30),
               const Text(
                 "Create an account",
@@ -152,16 +154,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/google.png',
-                      height: 22,
-                      width: 22,
-                    ),
+                    Image.asset('assets/google.png', height: 22, width: 22),
                     const SizedBox(width: 12),
-                    const Text(
-                      "Continue with Google",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-                    ),
+                    const Text("Continue with Google",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),

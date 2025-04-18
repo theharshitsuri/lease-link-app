@@ -107,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onLocationSelected(Prediction prediction) {
+    FocusScope.of(context).unfocus();
     setState(() {
       _searchController.text = prediction.description ?? '';
       _selectedLat = double.tryParse(prediction.lat ?? '');
