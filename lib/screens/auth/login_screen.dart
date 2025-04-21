@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main_nav_screen.dart';
+import 'email_verification_screen.dart'; // Adjust if needed
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -28,20 +29,38 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isLoading = true);
 
     try {
-      final response = await Supabase.instance.client.auth.signInWithPassword(
+      // Step 1: Sign in
+      await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      if (response.user != null && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainNavScreen()),
-        );
-      } else {
+      // Step 2: Refresh session to get the latest user info
+      await Supabase.instance.client.auth.refreshSession();
+      final user = Supabase.instance.client.auth.currentUser;
+
+      // Step 3: Check if email is verified
+      if (user?.emailConfirmedAt == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Login failed")),
+          const SnackBar(content: Text("Please verify your email to continue.")),
         );
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EmailVerificationScreen(email: email),
+            ),
+          );
+        }
+      } else {
+        // Verified user — proceed
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainNavScreen()),
+          );
+        }
       }
     } on AuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -145,7 +164,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Google Sign-In Button
               OutlinedButton(
                 onPressed: loginWithGoogle,
                 style: OutlinedButton.styleFrom(
@@ -158,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Image.asset(
-                      'assets/google.png', // ✅ Add this image
+                      'assets/google.png',
                       height: 22,
                       width: 22,
                     ),
