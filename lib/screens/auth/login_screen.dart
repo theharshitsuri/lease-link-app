@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main_nav_screen.dart';
-import 'email_verification_screen.dart'; // Adjust if needed
+import 'email_verification_screen.dart';
+import 'forgot_password_screen.dart'; // NEW
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,17 +30,14 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isLoading = true);
 
     try {
-      // Step 1: Sign in
       await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      // Step 2: Refresh session to get the latest user info
       await Supabase.instance.client.auth.refreshSession();
       final user = Supabase.instance.client.auth.currentUser;
 
-      // Step 3: Check if email is verified
       if (user?.emailConfirmedAt == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Please verify your email to continue.")),
@@ -54,7 +52,6 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
-        // Verified user — proceed
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -63,9 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } on AuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Something went wrong")),
@@ -149,7 +144,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 8),
+
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
+                  },
+                  child: const Text("Forgot Password?", style: TextStyle(color: Colors.purpleAccent)),
+                ),
+              ),
+              const SizedBox(height: 12),
 
               ElevatedButton(
                 onPressed: isLoading ? null : loginUser,
@@ -175,11 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/google.png',
-                      height: 22,
-                      width: 22,
-                    ),
+                    Image.asset('assets/google.png', height: 22, width: 22),
                     const SizedBox(width: 12),
                     const Text(
                       "Continue with Google",
@@ -188,7 +190,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 20),
 
               Row(
