@@ -68,10 +68,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
               location: listing['location'] ?? '',
               rent: listing['rent']?.toString() ?? '',
               availableFrom: listing['available_from'] ?? '',
+              availableTo: listing['available_to'],
               description: listing['description'] ?? '',
               gender: listing['gender'] ?? 'Any',
               images: images,
               userId: userId,
+              userEmail: listing['user_email'] ?? '',
             ),
           ),
         );
@@ -103,7 +105,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator(color: Colors.purple));
               } else if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red)));
+                return Center(child: Text('Error: \${snapshot.error}', style: TextStyle(color: Colors.red)));
               } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return const Center(child: Text('No listings found.', style: TextStyle(color: Colors.white)));
               }

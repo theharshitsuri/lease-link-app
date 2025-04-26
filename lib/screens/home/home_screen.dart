@@ -17,7 +17,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final supabase = Supabase.instance.client;
   final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode(); // ✅ New focus node
+  final FocusNode _searchFocusNode = FocusNode();
   late ScrollController _scrollController;
   double? _selectedLat;
   double? _selectedLng;
@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _searchFocusNode.dispose(); // ✅ Dispose the focus node
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -109,8 +109,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onLocationSelected(Prediction prediction) {
-    FocusScope.of(context).unfocus(); // ✅ Ensure keyboard dismiss
-    _searchFocusNode.unfocus();       // ✅ Additional layer of focus dismissal
+    FocusScope.of(context).unfocus();
+    _searchFocusNode.unfocus();
     setState(() {
       _searchController.text = prediction.description ?? '';
       _selectedLat = double.tryParse(prediction.lat ?? '');
@@ -165,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
               location: listing['location'] ?? '',
               rent: listing['rent']?.toString() ?? '',
               availableFrom: listing['available_from'] ?? '',
+              availableTo: listing['available_to'],
               description: listing['description'] ?? '',
               gender: listing['gender'] ?? '',
               images: images,
@@ -206,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(), // ✅ Tap anywhere to dismiss
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1200),
@@ -216,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: GooglePlaceAutoCompleteTextField(
                     textEditingController: _searchController,
-                    focusNode: _searchFocusNode, // ✅ Add focusNode
+                    focusNode: _searchFocusNode,
                     googleAPIKey: "AIzaSyAhxj35WP_-sm_0C23hcQNYS5BqmNl09Cw",
                     inputDecoration: _inputDecoration('Search by city or address...'),
                     debounceTime: 400,
@@ -224,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     getPlaceDetailWithLatLng: _onLocationSelected,
                     itemClick: (Prediction p) {
                       _onLocationSelected(p);
-                      _searchFocusNode.unfocus(); // ✅ Extra unfocus safeguard
+                      _searchFocusNode.unfocus();
                     },
                     seperatedBuilder: const Divider(height: 1, color: Colors.grey),
                   ),
@@ -237,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator(color: Colors.purple));
                       } else if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red)));
+                        return Center(child: Text('Error: \${snapshot.error}', style: TextStyle(color: Colors.red)));
                       } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                         return const Center(child: Text('No listings found.', style: TextStyle(color: Colors.white)));
                       }

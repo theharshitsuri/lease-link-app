@@ -29,7 +29,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     fetchMessages();
     _subscribeToMessages();
-    markMessagesAsRead(); // 👈 Mark as read on open
+    markMessagesAsRead();
   }
 
   Future<void> fetchMessages() async {
@@ -37,11 +37,11 @@ class _ChatScreenState extends State<ChatScreen> {
         .from('messages')
         .select()
         .eq('chat_id', widget.chatId)
-        .order('timestamp')
-        .limit(100);
+        .order('timestamp');
 
     setState(() {
       _messages = List<Map<String, dynamic>>.from(response);
+      _messages.sort((a, b) => DateTime.parse(b['timestamp']).compareTo(DateTime.parse(a['timestamp'])));
     });
 
     _scrollToBottom();
@@ -53,21 +53,25 @@ class _ChatScreenState extends State<ChatScreen> {
 
     await supabase.from('messages')
       .update({'read': true})
-      .eq('chat_id', widget.chatId)  
+      .eq('chat_id', widget.chatId)
       .neq('sender_id', currentUserId)
       .eq('read', false);
   }
 
   void _subscribeToMessages() {
     _channel = supabase.channel('messages:${widget.chatId}');
-
     _channel.on(
       RealtimeListenTypes.postgresChanges,
-      ChannelFilter(event: '*', schema: 'public', table: 'messages'),
+      ChannelFilter(
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: 'chat_id=eq.${widget.chatId}',
+      ),
       (payload, [ref]) {
-        if (payload['new'] != null && payload['new']['chat_id'] == widget.chatId) {
+        if (payload['new'] != null) {
           setState(() {
-            _messages.add(payload['new']);
+            _messages.insert(0, payload['new']);
           });
           _scrollToBottom();
         }
@@ -90,7 +94,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollToBottom() {
-    Future.delayed(const Duration(milliseconds: 100), () {
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,

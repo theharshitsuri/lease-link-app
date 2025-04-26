@@ -61,6 +61,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       location: listing['location'] ?? '',
       rent: listing['rent']?.toString() ?? '',
       availableFrom: listing['available_from'] ?? '',
+      availableTo: listing['available_to'],
       images: images,
       isFavorite: true,
       onTap: () {
@@ -73,6 +74,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               location: listing['location'] ?? '',
               rent: listing['rent']?.toString() ?? '',
               availableFrom: listing['available_from'] ?? '',
+              availableTo: listing['available_to'],
               description: listing['description'] ?? '',
               gender: listing['gender'] ?? '',
               images: images,
@@ -107,7 +109,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator(color: Colors.purple));
               } else if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red)));
+                return Center(child: Text('Error: \${snapshot.error}', style: TextStyle(color: Colors.red)));
               } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return const Center(child: Text('No favorites yet.', style: TextStyle(color: Colors.white)));
               }

@@ -13,6 +13,7 @@ class EditListingScreen extends StatefulWidget {
   final String availableFrom;
   final String description;
   final String gender;
+  final String availableTo; // ✅ Added
 
   const EditListingScreen({
     super.key,
@@ -23,6 +24,7 @@ class EditListingScreen extends StatefulWidget {
     required this.availableFrom,
     required this.description,
     required this.gender,
+    required this.availableTo,
   });
 
   @override
@@ -41,7 +43,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
   List<dynamic> _existingImages = [];
   List<File> _newImages = [];
   String _genderPref = 'Any';
-  DateTime? _availableDate;
+  DateTime? _availableFrom;
+  DateTime? _availableTo; // ✅ Added
   bool _isSaving = false;
 
   final ImagePicker _picker = ImagePicker();
@@ -54,7 +57,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
     _rentController = TextEditingController(text: widget.rent);
     _descriptionController = TextEditingController(text: widget.description);
     _genderPref = widget.gender;
-    _availableDate = DateFormat.yMMMMd().parse(widget.availableFrom);
+    _availableFrom = DateTime.tryParse(widget.availableFrom);
+    _availableTo = DateTime.tryParse(widget.availableTo); // ✅ Parse To
     fetchExistingImages();
   }
 
@@ -101,7 +105,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
         'rent': double.parse(_rentController.text.trim()),
         'description': _descriptionController.text.trim(),
         'gender': _genderPref,
-        'available_from': DateFormat.yMMMMd().format(_availableDate!),
+        'available_from': _availableFrom!.toIso8601String(),
+        'available_to': _availableTo!.toIso8601String(), // ✅ Added
         'images': allImages,
       }).eq('id', widget.listingId);
 
@@ -244,17 +249,36 @@ class _EditListingScreenState extends State<EditListingScreen> {
             onPressed: () async {
               DateTime? picked = await showDatePicker(
                 context: context,
-                initialDate: _availableDate ?? DateTime.now(),
+                initialDate: _availableFrom ?? DateTime.now(),
                 firstDate: DateTime(2024),
                 lastDate: DateTime(2026),
               );
-              if (picked != null) setState(() => _availableDate = picked);
+              if (picked != null) setState(() => _availableFrom = picked);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
             child: Text(
-              _availableDate == null
+              _availableFrom == null
                   ? 'Select Available From Date'
-                  : 'Available From: ${DateFormat.yMMMMd().format(_availableDate!)}',
+                  : 'Available From: ${DateFormat.yMMMMd().format(_availableFrom!)}',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: () async {
+              DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: _availableTo ?? DateTime.now(),
+                firstDate: DateTime(2024),
+                lastDate: DateTime(2026),
+              );
+              if (picked != null) setState(() => _availableTo = picked);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+            child: Text(
+              _availableTo == null
+                  ? 'Select Available To Date'
+                  : 'Available To: ${DateFormat.yMMMMd().format(_availableTo!)}',
               style: const TextStyle(color: Colors.white),
             ),
           ),

@@ -9,6 +9,7 @@ class ListingDetailScreen extends StatefulWidget {
   final String location;
   final String rent;
   final String availableFrom;
+  final String availableTo;
   final String description;
   final String gender;
   final List<dynamic> images;
@@ -22,6 +23,7 @@ class ListingDetailScreen extends StatefulWidget {
     required this.location,
     required this.rent,
     required this.availableFrom,
+    required this.availableTo,
     required this.description,
     required this.gender,
     required this.images,
@@ -115,6 +117,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         const SizedBox(height: 8),
         Text('${widget.location} · \$${widget.rent}/month', style: const TextStyle(color: Colors.grey)),
         Text('Available from: ${widget.availableFrom}', style: const TextStyle(color: Colors.white70)),
+        Text('Available to: ${widget.availableTo}', style: const TextStyle(color: Colors.white70)),
         Text('Gender Preference: ${widget.gender}', style: const TextStyle(color: Colors.white70)),
         const SizedBox(height: 16),
         const Text('Description:',
@@ -140,6 +143,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                           location: widget.location,
                           rent: widget.rent,
                           availableFrom: widget.availableFrom,
+                          availableTo: widget.availableTo,
                           description: widget.description,
                           gender: widget.gender,
                         ),

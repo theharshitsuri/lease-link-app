@@ -5,6 +5,7 @@ class ListingCard extends StatefulWidget {
   final String location;
   final String rent;
   final String availableFrom;
+  final String? availableTo; // ✅ New field
   final List<dynamic> images;
   final bool isFavorite;
   final VoidCallback onTap;
@@ -16,6 +17,7 @@ class ListingCard extends StatefulWidget {
     required this.location,
     required this.rent,
     required this.availableFrom,
+    this.availableTo,
     required this.images,
     required this.isFavorite,
     required this.onTap,
@@ -59,7 +61,6 @@ class _ListingCardState extends State<ListingCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image Section
               Stack(
                 children: [
                   Container(
@@ -87,8 +88,6 @@ class _ListingCardState extends State<ListingCard> {
                           )
                         : null,
                   ),
-
-                  // Favorite icon
                   Positioned(
                     top: 8,
                     right: 8,
@@ -101,8 +100,6 @@ class _ListingCardState extends State<ListingCard> {
                       ),
                     ),
                   ),
-
-                  // Left arrow
                   if (hasImages && widget.images.length > 1)
                     Positioned(
                       left: 8,
@@ -116,8 +113,6 @@ class _ListingCardState extends State<ListingCard> {
                         ),
                       ),
                     ),
-
-                  // Right arrow
                   if (hasImages && widget.images.length > 1)
                     Positioned(
                       right: 8,
@@ -133,8 +128,6 @@ class _ListingCardState extends State<ListingCard> {
                     ),
                 ],
               ),
-
-              // Info Section
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                 child: Column(
@@ -159,7 +152,7 @@ class _ListingCardState extends State<ListingCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '\$${widget.rent}/month · Available from ${widget.availableFrom}',
+                      '\$${widget.rent}/month · ${widget.availableTo != null ? "${widget.availableFrom} to ${widget.availableTo}" : "Available from ${widget.availableFrom}"}',
                       style: const TextStyle(fontSize: 12, color: Colors.white70),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
