@@ -4,7 +4,8 @@ import 'screens/auth/welcome_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/main_nav_screen.dart';
-import 'screens/auth/profile_setup_screen.dart'; // 👈 Add this import
+import 'screens/auth/profile_setup_screen.dart';
+import 'screens/auth/new_password_screen.dart'; // ✅ For password reset flow
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -36,7 +37,15 @@ class _LeaseLinkAppState extends State<LeaseLinkApp> {
 
       if (event == AuthChangeEvent.signedOut || event == AuthChangeEvent.userDeleted) {
         navigatorKey.currentState?.pushNamedAndRemoveUntil('/', (route) => false);
-      } else if (event == AuthChangeEvent.signedIn) {
+      }
+
+      // ✅ Handle password reset email link
+      else if (event == AuthChangeEvent.passwordRecovery) {
+        navigatorKey.currentState?.pushNamedAndRemoveUntil('/reset-password', (route) => false);
+      }
+
+      // ✅ Handle login + email verification
+      else if (event == AuthChangeEvent.signedIn) {
         final userId = Supabase.instance.client.auth.currentUser?.id;
         if (userId == null) return;
 
@@ -68,7 +77,8 @@ class _LeaseLinkAppState extends State<LeaseLinkApp> {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const MainNavScreen(),
-        '/setup': (context) => const ProfileSetupScreen(), // 👈 Add this route
+        '/setup': (context) => const ProfileSetupScreen(),
+        '/reset-password': (context) => const NewPasswordScreen(), // ✅ password reset UI
       },
     );
   }

@@ -28,7 +28,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final response = await supabase
         .from('chats')
         .select()
-        .or('user1_id.eq.${currentUser.id},user2_id.eq.${currentUser.id}');
+        .or('user1_id.eq.${currentUser.id},user2_id.eq.${currentUser.id}')
+        .order('updated_at', ascending: false);
 
     final chats = List<Map<String, dynamic>>.from(response);
 
@@ -84,7 +85,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         backgroundColor: Colors.black,
         elevation: 0,
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      body: FutureBuilder<List<Map<String, dynamic>>> (
         future: _chatFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

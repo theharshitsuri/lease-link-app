@@ -5,6 +5,7 @@ class ListingCard extends StatefulWidget {
   final String location;
   final String rent;
   final String availableFrom;
+  final String? availableTo; // ✅ New field
   final List<dynamic> images;
   final bool isFavorite;
   final VoidCallback onTap;
@@ -16,6 +17,7 @@ class ListingCard extends StatefulWidget {
     required this.location,
     required this.rent,
     required this.availableFrom,
+    this.availableTo,
     required this.images,
     required this.isFavorite,
     required this.onTap,
@@ -30,141 +32,136 @@ class _ListingCardState extends State<ListingCard> {
   int _currentImageIndex = 0;
 
   void _nextImage() {
-    if (_currentImageIndex < widget.images.length - 1) {
-      setState(() => _currentImageIndex++);
-    }
+    setState(() {
+      _currentImageIndex = (_currentImageIndex + 1) % widget.images.length;
+    });
   }
 
   void _prevImage() {
-    if (_currentImageIndex > 0) {
-      setState(() => _currentImageIndex--);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant ListingCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.images != widget.images) {
-      _currentImageIndex = 0;
-    }
+    setState(() {
+      _currentImageIndex = (_currentImageIndex - 1 + widget.images.length) % widget.images.length;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final hasImages = widget.images.isNotEmpty;
-    final currentImage = hasImages ? widget.images[_currentImageIndex].toString() : '';
+    final currentImage = hasImages ? widget.images[_currentImageIndex] : null;
 
     return InkWell(
       onTap: widget.onTap,
       borderRadius: BorderRadius.circular(16),
-      child: Card(
-        color: Colors.grey[900],
-        margin: const EdgeInsets.only(bottom: 20),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        elevation: 4,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                // 📷 Image section
-                Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    image: hasImages
-                        ? DecorationImage(
-                            image: NetworkImage(currentImage),
-                            fit: BoxFit.cover,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    height: 140,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[800],
+                      image: currentImage != null
+                          ? DecorationImage(
+                              image: NetworkImage(currentImage),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: currentImage == null
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.image_not_supported, color: Colors.white38, size: 40),
+                                SizedBox(height: 6),
+                                Text("No photos available", style: TextStyle(color: Colors.white54)),
+                              ],
+                            ),
                           )
                         : null,
                   ),
-                  child: !hasImages
-                      ? const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.image_not_supported, size: 48, color: Colors.white30),
-                              SizedBox(height: 8),
-                              Text(
-                                'No photos available',
-                                style: TextStyle(color: Colors.white54, fontSize: 14),
-                              ),
-                            ],
-                          ),
-                        )
-                      : null,
-                ),
-
-                // ⬅️ Prev
-                if (hasImages && widget.images.length > 1)
                   Positioned(
-                    left: 8,
-                    top: 75,
-                    child: IconButton(
-                      onPressed: _prevImage,
-                      icon: const Icon(Icons.chevron_left, color: Colors.white),
-                      iconSize: 32,
-                      splashRadius: 24,
-                    ),
-                  ),
-
-                // ➡️ Next
-                if (hasImages && widget.images.length > 1)
-                  Positioned(
+                    top: 8,
                     right: 8,
-                    top: 75,
-                    child: IconButton(
-                      onPressed: _nextImage,
-                      icon: const Icon(Icons.chevron_right, color: Colors.white),
-                      iconSize: 32,
-                      splashRadius: 24,
+                    child: GestureDetector(
+                      onTap: widget.onFavoriteToggle,
+                      child: Icon(
+                        widget.isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: widget.isFavorite ? Colors.redAccent : Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ),
-
-                // ❤️ Favorite toggle
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: IconButton(
-                    icon: Icon(
-                      widget.isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: widget.isFavorite ? Colors.redAccent : Colors.white70,
+                  if (hasImages && widget.images.length > 1)
+                    Positioned(
+                      left: 8,
+                      top: 50,
+                      child: GestureDetector(
+                        onTap: _prevImage,
+                        child: const CircleAvatar(
+                          backgroundColor: Colors.black54,
+                          radius: 16,
+                          child: Icon(Icons.chevron_left, color: Colors.white),
+                        ),
+                      ),
                     ),
-                    iconSize: 28,
-                    onPressed: widget.onFavoriteToggle,
-                    splashRadius: 20,
-                    tooltip: widget.isFavorite ? 'Remove Favorite' : 'Add to Favorites',
-                  ),
-                ),
-              ],
-            ),
-
-            // 📄 Listing Info
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.title,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(widget.location, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-                  const SizedBox(height: 6),
-                  Text(
-                    '\$${widget.rent}/month · Available from ${widget.availableFrom}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
+                  if (hasImages && widget.images.length > 1)
+                    Positioned(
+                      right: 8,
+                      top: 50,
+                      child: GestureDetector(
+                        onTap: _nextImage,
+                        child: const CircleAvatar(
+                          backgroundColor: Colors.black54,
+                          radius: 16,
+                          child: Icon(Icons.chevron_right, color: Colors.white),
+                        ),
+                      ),
+                    ),
                 ],
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.location,
+                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '\$${widget.rent}/month · ${widget.availableTo != null ? "${widget.availableFrom} to ${widget.availableTo}" : "Available from ${widget.availableFrom}"}',
+                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

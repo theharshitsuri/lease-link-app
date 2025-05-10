@@ -13,6 +13,7 @@ class MyListingsScreen extends StatefulWidget {
 class _MyListingsScreenState extends State<MyListingsScreen> {
   final supabase = Supabase.instance.client;
   late Future<List<Map<String, dynamic>>> _myListingsFuture;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -44,8 +45,49 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     });
   }
 
+  Widget _buildListingCard(Map<String, dynamic> listing) {
+    final listingId = listing['id'];
+    final userId = listing['user_id'];
+    final isFavorite = listing['is_favorite'] ?? false;
+    final images = (listing['images'] ?? []) as List<dynamic>;
+
+    return ListingCard(
+      title: listing['title'] ?? '',
+      location: listing['location'] ?? '',
+      rent: listing['rent']?.toString() ?? '',
+      availableFrom: listing['available_from'] ?? '',
+      images: images,
+      isFavorite: isFavorite,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ListingDetailScreen(
+              id: listingId,
+              title: listing['title'] ?? '',
+              location: listing['location'] ?? '',
+              rent: listing['rent']?.toString() ?? '',
+              availableFrom: listing['available_from'] ?? '',
+              availableTo: listing['available_to'],
+              description: listing['description'] ?? '',
+              gender: listing['gender'] ?? 'Any',
+              images: images,
+              userId: userId,
+              userEmail: listing['user_email'] ?? '',
+            ),
+          ),
+        );
+      },
+      onFavoriteToggle: () {
+        toggleFavorite(listingId, !isFavorite);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isWideScreen = MediaQuery.of(context).size.width > 800;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -54,68 +96,46 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         elevation: 0,
         surfaceTintColor: Colors.black,
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _myListingsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.purple),
-            );
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}',
-                  style: TextStyle(color: Colors.red)),
-            );
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text('No listings found.',
-                  style: TextStyle(color: Colors.white)),
-            );
-          }
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _myListingsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: Colors.purple));
+              } else if (snapshot.hasError) {
+                return Center(child: Text('Error: \${snapshot.error}', style: TextStyle(color: Colors.red)));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('No listings found.', style: TextStyle(color: Colors.white)));
+              }
 
-          final listings = snapshot.data!;
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: listings.length,
-            itemBuilder: (context, index) {
-              final listing = listings[index];
-              final listingId = listing['id'];
-              final userId = listing['user_id'];
-              final isFavorite = listing['is_favorite'] ?? false;
-              final images = (listing['images'] ?? []) as List<dynamic>;
+              final listings = snapshot.data!;
 
-              return ListingCard(
-                title: listing['title'] ?? '',
-                location: listing['location'] ?? '',
-                rent: listing['rent']?.toString() ?? '',
-                availableFrom: listing['available_from'] ?? '',
-                images: images,
-                isFavorite: isFavorite,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ListingDetailScreen(
-                        id: listingId,
-                        title: listing['title'] ?? '',
-                        location: listing['location'] ?? '',
-                        rent: listing['rent']?.toString() ?? '',
-                        availableFrom: listing['available_from'] ?? '',
-                        description: listing['description'] ?? '',
-                        gender: listing['gender'] ?? 'Any',
-                        images: images,
-                        userId: userId,
+              return isWideScreen
+                  ? GridView.builder(
+                      padding: const EdgeInsets.all(24),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 20,
+                        mainAxisSpacing: 20,
+                        childAspectRatio: 4 / 3,
                       ),
-                    ),
-                  );
-                },
-                onFavoriteToggle: () {
-                  toggleFavorite(listingId, !isFavorite);
-                },
-              );
+                      itemCount: listings.length,
+                      itemBuilder: (_, index) => _buildListingCard(listings[index]),
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: listings.length,
+                      itemBuilder: (_, index) => Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildListingCard(listings[index]),
+                      ),
+                    );
             },
-          );
-        },
+          ),
+        ),
       ),
     );
   }

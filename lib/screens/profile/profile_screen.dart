@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/welcome_screen.dart';
-import 'edit_profile_screen.dart'; // Make sure this path is correct
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -38,17 +38,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout(BuildContext context) async {
-    await Supabase.instance.client.auth.signOut();
+    await supabase.auth.signOut();
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-      (route) => false,
+      (route) => false
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = supabase.auth.currentUser;
+    final isWeb = MediaQuery.of(context).size.width > 700;
 
     if (_isLoading) {
       return const Scaffold(
@@ -56,6 +57,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
         body: Center(child: CircularProgressIndicator(color: Colors.purple)),
       );
     }
+
+    final profileContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        CircleAvatar(
+          radius: 50,
+          backgroundImage: _profile?['profile_image_url'] != null
+              ? NetworkImage(_profile!['profile_image_url'])
+              : null,
+          backgroundColor: Colors.purple,
+          child: _profile?['profile_image_url'] == null
+              ? const Icon(Icons.person, size: 50, color: Colors.white)
+              : null,
+        ),
+        const SizedBox(height: 20),
+        Text(
+          _profile?['name'] ?? user?.email?.split('@')[0] ?? 'User',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        Text(
+          user?.email ?? '',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        const SizedBox(height: 20),
+        ListTile(
+          leading: const Icon(Icons.edit, color: Colors.white),
+          title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+            );
+            setState(() => _isLoading = true);
+            _loadProfile();
+          },
+        ),
+        const Divider(color: Colors.white24),
+        ListTile(
+          leading: const Icon(Icons.logout, color: Colors.white),
+          title: const Text('Logout', style: TextStyle(color: Colors.white)),
+          onTap: () => _logout(context),
+        ),
+      ],
+    );
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -67,51 +112,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              radius: 50,
-              backgroundImage: _profile?['profile_image_url'] != null
-                  ? NetworkImage(_profile!['profile_image_url'])
-                  : null,
-              backgroundColor: Colors.purple,
-              child: _profile?['profile_image_url'] == null
-                  ? const Icon(Icons.person, size: 50, color: Colors.white)
-                  : null,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              _profile?['name'] ?? user?.email?.split('@')[0] ?? 'User',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            Text(
-              user?.email ?? '',
-              style: const TextStyle(color: Colors.grey),
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit, color: Colors.white),
-              title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-                );
-                setState(() {
-                  _isLoading = true;
-                });
-                _loadProfile();
-              },
-            ),
-            const Divider(color: Colors.white24),
-
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.white),
-              title: const Text('Logout', style: TextStyle(color: Colors.white)),
-              onTap: () => _logout(context),
-            ),
-          ],
-        ),
+        child: isWeb
+            ? Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: profileContent,
+                ),
+              )
+            : profileContent,
       ),
     );
   }
