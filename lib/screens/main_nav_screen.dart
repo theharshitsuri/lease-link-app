@@ -5,7 +5,7 @@ import 'package:lease_link_app/screens/favorites/favorites_screen.dart';
 import 'package:lease_link_app/screens/home/home_screen.dart';
 import 'package:lease_link_app/screens/my_listings/my_listings_screen.dart';
 import 'package:lease_link_app/screens/profile/profile_screen.dart';
-import 'package:lease_link_app/screens/auth/email_verification_screen.dart'; // adjust path if needed
+import 'package:lease_link_app/screens/auth/email_verification_screen.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({super.key});
@@ -16,6 +16,7 @@ class MainNavScreen extends StatefulWidget {
 
 class _MainNavScreenState extends State<MainNavScreen> {
   int _currentIndex = 0;
+  bool _hasCheckedVerification = false;
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -26,26 +27,28 @@ class _MainNavScreenState extends State<MainNavScreen> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _checkEmailVerification();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_hasCheckedVerification) {
+      _checkEmailVerification();
+      _hasCheckedVerification = true;
+    }
   }
 
   Future<void> _checkEmailVerification() async {
     final user = Supabase.instance.client.auth.currentUser;
 
-    if (user?.emailConfirmedAt == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please verify your email to continue.")),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => EmailVerificationScreen(email: user?.email ?? 'your email'),
-          ),
-        );
-      }
+    if (user?.emailConfirmedAt == null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please verify your email to continue.")),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EmailVerificationScreen(email: user?.email ?? 'your email'),
+        ),
+      );
     }
   }
 
@@ -67,7 +70,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: 'Home',
+            label: 'Explore',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box),

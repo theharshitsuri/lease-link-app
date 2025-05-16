@@ -119,13 +119,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  InputDecoration _inputDecoration(String label) {
+  InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.white70),
+      hintText: hint,
+      hintStyle: const TextStyle(color: Colors.white70),
       filled: true,
       fillColor: const Color.fromARGB(255, 0, 0, 0),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Colors.white70),
@@ -228,6 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _searchFocusNode.unfocus();
                     },
                     seperatedBuilder: const Divider(height: 1, color: Colors.grey),
+                    textStyle: const TextStyle(color: Colors.white),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -238,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator(color: Colors.purple));
                       } else if (snapshot.hasError) {
-                        return Center(child: Text('Error: \${snapshot.error}', style: TextStyle(color: Colors.red)));
+                        return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red)));
                       } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                         return const Center(child: Text('No listings found.', style: TextStyle(color: Colors.white)));
                       }

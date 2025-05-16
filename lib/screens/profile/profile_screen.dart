@@ -42,8 +42,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-      (route) => false
+      (route) => false,
     );
+  }
+
+  Future<void> _deleteAccount(BuildContext context) async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      // 1. Delete user's listings
+      await supabase.from('listings').delete().eq('user_id', userId);
+
+      // 2. Delete user's profile
+      await supabase.from('profiles').delete().eq('id', userId);
+
+      // 3. Sign out the user
+      await supabase.auth.signOut();
+
+      // 4. Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account and listings deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // 5. Wait a bit so user sees the snackbar
+      await Future.delayed(const Duration(seconds: 1));
+
+      // 6. Navigate back to welcome screen
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting account: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -98,6 +139,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           leading: const Icon(Icons.logout, color: Colors.white),
           title: const Text('Logout', style: TextStyle(color: Colors.white)),
           onTap: () => _logout(context),
+        ),
+        const Divider(color: Colors.white24),
+        ListTile(
+          leading: const Icon(Icons.delete_forever, color: Color.fromARGB(255, 255, 255, 255)),
+          title: const Text('Delete Account', style: TextStyle(color: Color.fromARGB(255, 255, 255, 255))),
+          onTap: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                backgroundColor: Colors.black,
+                title: const Text('Confirm Deletion', style: TextStyle(color: Colors.white)),
+                content: const Text('Are you sure you want to delete your account permanently?', style: TextStyle(color: Colors.white70)),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirmed == true) {
+              await _deleteAccount(context);
+            }
+          },
         ),
       ],
     );

@@ -37,11 +37,10 @@ class _ChatScreenState extends State<ChatScreen> {
         .from('messages')
         .select()
         .eq('chat_id', widget.chatId)
-        .order('timestamp');
+        .order('timestamp', ascending: true); // oldest to newest!
 
     setState(() {
       _messages = List<Map<String, dynamic>>.from(response);
-      _messages.sort((a, b) => DateTime.parse(b['timestamp']).compareTo(DateTime.parse(a['timestamp'])));
     });
 
     _scrollToBottom();
@@ -71,7 +70,7 @@ class _ChatScreenState extends State<ChatScreen> {
       (payload, [ref]) {
         if (payload['new'] != null) {
           setState(() {
-            _messages.insert(0, payload['new']);
+            _messages.add(payload['new']); // add at end now!
           });
           _scrollToBottom();
         }
@@ -140,7 +139,6 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Expanded(
               child: ListView.builder(
-                reverse: true,
                 controller: _scrollController,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 itemCount: _messages.length,
