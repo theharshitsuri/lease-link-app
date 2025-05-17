@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lease_link_app/screens/main_nav_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'email_verification_screen.dart';
@@ -102,25 +103,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final user = response.user;
       if (user != null) {
-        final profile = await Supabase.instance.client
-            .from('profiles')
-            .select()
-            .eq('id', user.id)
-            .maybeSingle();
-
-        if (profile == null) {
+      
+        if (credential.givenName != null || credential.familyName != null ) {
           final fullName =
               "${credential.givenName ?? ''} ${credential.familyName ?? ''}".trim();
-
           await Supabase.instance.client.from('profiles').insert({
             'id': user.id,
             'name': fullName,
             'profile_image_url': '',
           });
+             if (!mounted) return;
+           Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainNavScreen()),
+        );
+        } else {
+         _handleProfileNavigation(user.id);
         }
-
-        if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/setup');
+       
       }
     }
   } catch (e) {
@@ -129,6 +129,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+
+ Future<void> _handleProfileNavigation(String userId) async {
+    final profile = await Supabase.instance.client
+        .from('profiles')
+        .select()
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (profile == null){
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/setup');
+    } else {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MainNavScreen()),
+      );
+    }
+  }
 
 
   @override
