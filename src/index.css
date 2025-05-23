@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === Google Places Autocomplete dropdown dark theme === */
+.pac-container {
+  background-color: #1e1e1e !important;
+  border: 1px solid #000000 !important;
+  border-radius: 12px !important; /* <--- this makes it rounded */
+  color: white !important;
+  font-family: 'Inter', sans-serif;
+  z-index: 9999 !important;
+  overflow: hidden; /* Ensures child items respect border radius */
+}
+
+
+.pac-item {
+  background-color: transparent !important;
+  color: white !important;
+}
+
+.pac-item:hover {
+  background-color: #2a2a2a !important;
+}
+
+.pac-item-query {
+  color: #ffffff !important; /* Tailwind's purple-400 */
+}
+
+.pac-matched {
+  color: #a855f7 !important; /* Tailwind's purple-500 */
+}
