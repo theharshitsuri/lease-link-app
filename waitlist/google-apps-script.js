@@ -1,13 +1,3 @@
-/**
- * Google Apps Script for LeaseLink Waitlist
- * 
- * Instructions:
- * 1. Go to your Google Sheet
- * 2. Click Extensions → Apps Script
- * 3. Replace the default code with this code
- * 4. Deploy as a web app
- * 5. Copy the web app URL and update script.js
- */
 
 function doPost(e) {
   try {
