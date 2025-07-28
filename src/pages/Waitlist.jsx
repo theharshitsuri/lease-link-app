@@ -15,7 +15,6 @@ function Waitlist() {
     try {
       const response = await fetch('https://script.google.com/macros/s/AKfycbwpmzZfqoqSh324JM6cAmw2iIkNoNJp3Kj0X74qM1rxH9am1R6LwnUZhE5SOCpks_B0aQ/exec', {
         method: 'POST',
-        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -26,7 +25,6 @@ function Waitlist() {
       });
 
       console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
 
       if (response.ok) {
         const result = await response.json();
@@ -46,11 +44,8 @@ function Waitlist() {
     } catch (error) {
       console.error('Error submitting form:', error);
       
-      // Provide more specific error messages
       if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
         setError('Network error. Please check your internet connection and try again.');
-      } else if (error.message.includes('CORS')) {
-        setError('CORS error. The server needs to be updated to allow requests from localhost.');
       } else {
         setError(`Something went wrong: ${error.message}`);
       }
@@ -91,7 +86,6 @@ function Waitlist() {
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-6">
       <div className="max-w-md w-full">
-        {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <img src={houseLogo} alt="LeaseLink" className="w-16 h-16" />
@@ -101,7 +95,6 @@ function Waitlist() {
           <p className="text-gray-400">Your student-friendly sublease marketplace</p>
         </div>
 
-        {/* Waitlist Form */}
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
           <h2 className="text-xl font-semibold text-white mb-2 text-center">Join the waitlist</h2>
           <p className="text-gray-400 text-sm text-center mb-6">Be the first to know when we launch</p>
@@ -144,7 +137,6 @@ function Waitlist() {
           )}
         </div>
 
-        {/* Features */}
         <div className="mt-8 grid grid-cols-1 gap-4">
           <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
             <div className="text-2xl mb-2">🏠</div>
