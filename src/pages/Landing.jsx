@@ -61,10 +61,10 @@ function Landing() {
 export default Landing;
 */
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import houseLogo from '../assets/house-logo.png';
 import haloImg from '../assets/halo.jpg';
+import houseLogo from '../assets/house-logo.png';
 import hubImg from '../assets/hub.jpg';
 import ivyImg from '../assets/ivy.jpg';
 
@@ -99,12 +99,21 @@ function Landing() {
             Designed for students, by students. Hassle-free. Affordable. Instant.
           </p>
 
-          <button
-            onClick={() => navigate('/auth')}
-            className="mt-4 px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl text-lg font-semibold shadow-md shadow-purple-900/50 transition"
-          >
-            Get Started
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={() => navigate('/auth')}
+              className="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl text-lg font-semibold shadow-md shadow-purple-900/50 transition"
+            >
+              Get Started
+            </button>
+            
+            <button
+              onClick={() => navigate('/waitlist')}
+              className="px-8 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-lg font-semibold transition"
+            >
+              Join Waitlist
+            </button>
+          </div>
         </div>
 
         {/* Right: Slideshow */}
