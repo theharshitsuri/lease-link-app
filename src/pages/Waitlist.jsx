@@ -13,7 +13,7 @@ function Waitlist() {
     setError('');
 
     try {
-      const response = await fetch('https://script.google.com/macros/s/AKfycbz0CNoZGCzMZROCoBbC0AxRRf9dLuk1nZf68ChDLP2hjm_HhgK9Y4aqcGk5azfqnncxDg/exec', {
+      const response = await fetch('https://script.google.com/macros/s/AKfycbwpmzZfqoqSh324JM6cAmw2iIkNoNJp3Kj0X74qM1rxH9am1R6LwnUZhE5SOCpks_B0aQ/exec', {
         method: 'POST',
         mode: 'cors',
         headers: {
