@@ -13,42 +13,26 @@ function Waitlist() {
     setError('');
 
     try {
-      const response = await fetch('https://script.google.com/macros/s/AKfycbwpmzZfqoqSh324JM6cAmw2iIkNoNJp3Kj0X74qM1rxH9am1R6LwnUZhE5SOCpks_B0aQ/exec', {
+      const formData = new FormData();
+      formData.append('email', email);
+
+      const response = await fetch('https://script.google.com/macros/s/AKfycbwpGimFmge9LlQP1g_S0hg2-wgUF3GgrV-AHgh00bsiqxO5xno4vqnLlnfaW_czm_Jp/exec', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          timestamp: new Date().toISOString()
-        })
+        body: formData
       });
 
-      console.log('Response status:', response.status);
+      const result = await response.text();
+      console.log('Response:', result);
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Response data:', result);
-        
-        if (result.result === 'success') {
-          setIsSuccess(true);
-          setEmail('');
-        } else {
-          throw new Error(result.error || 'Unknown error occurred');
-        }
+      if (response.ok && result.includes('Success')) {
+        setIsSuccess(true);
+        setEmail('');
       } else {
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        throw new Error(result || 'Failed to submit');
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      
-      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        setError('Network error. Please check your internet connection and try again.');
-      } else {
-        setError(`Something went wrong: ${error.message}`);
-      }
+      setError('Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -130,9 +114,6 @@ function Waitlist() {
           {error && (
             <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
               <p className="text-red-400 text-sm text-center">{error}</p>
-              <p className="text-red-400 text-xs text-center mt-1">
-                Check the browser console for more details
-              </p>
             </div>
           )}
         </div>
