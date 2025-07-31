@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'email_verification_screen.dart'; // ⬅️ make sure to import this
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'email_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -34,20 +35,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (response.session == null) {
-        // Requires email confirmation
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => EmailVerificationScreen(email: email),
-            ),
-          );
-        }
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EmailVerificationScreen(email: email),
+          ),
+        );
       } else {
-        // Email already confirmed or no confirmation required
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/setup');
+        await Supabase.instance.client.auth.refreshSession();
+        final user = Supabase.instance.client.auth.currentUser;
+
+        if (user != null) {
+          await Supabase.instance.client.from('profiles').insert({
+            'id': user.id,
+            'name': '',
+            'profile_image_url': '',
+          });
         }
+
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/setup');
       }
     } on AuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -56,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SnackBar(content: Text("Something went wrong")),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -73,6 +81,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Future<void> registerWithApple() async {
+  try {
+    final credential = await SignInWithApple.getAppleIDCredential(
+      scopes: [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+    );
+
+    final idToken = credential.identityToken;
+    final nonce = credential.state;
+
+    if (idToken != null) {
+      final response = await Supabase.instance.client.auth.signInWithIdToken(
+        provider: Provider.apple,
+        idToken: idToken,
+        nonce: nonce,
+      );
+
+      final user = response.user;
+      if (user != null) {
+        final profile = await Supabase.instance.client
+            .from('profiles')
+            .select()
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (profile == null) {
+          final fullName =
+              "${credential.givenName ?? ''} ${credential.familyName ?? ''}".trim();
+
+          await Supabase.instance.client.from('profiles').insert({
+            'id': user.id,
+            'name': fullName,
+            'profile_image_url': '',
+          });
+        }
+
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/setup');
+      }
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Apple Sign-In failed: $e")),
+    );
+  }
+}
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,50 +143,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               const Icon(Icons.house_rounded, size: 100, color: Colors.purple),
               const SizedBox(height: 10),
-              const Text("LeaseLink",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
-                    color: Colors.white,
-                  )),
+              const Text("LeaseLink", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, fontFamily: 'Montserrat', color: Colors.white)),
               const SizedBox(height: 30),
-              const Text(
-                "Create an account",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
+              const Text("Create an account", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
               const SizedBox(height: 30),
               TextField(
                 controller: emailController,
                 style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: "Email",
-                  labelStyle: const TextStyle(color: Colors.white70),
-                  filled: true,
-                  fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.purple),
-                  ),
-                ),
+                decoration: _inputDecoration("Email"),
               ),
               const SizedBox(height: 20),
               TextField(
                 controller: passwordController,
                 obscureText: true,
                 style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  labelStyle: const TextStyle(color: Colors.white70),
-                  filled: true,
-                  fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.purple),
-                  ),
-                ),
+                decoration: _inputDecoration("Password"),
               ),
               const SizedBox(height: 30),
               ElevatedButton(
@@ -156,8 +185,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     Image.asset('assets/google.png', height: 22, width: 22),
                     const SizedBox(width: 12),
-                    const Text("Continue with Google",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                    const Text("Continue with Google", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: registerWithApple,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.apple, color: Colors.white, size: 22),
+                    SizedBox(width: 12),
+                    Text("Continue with Apple", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -167,9 +213,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 children: [
                   const Text("Already have an account?", style: TextStyle(color: Colors.white70)),
                   TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/login');
-                    },
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
                     child: const Text("Login here"),
                   ),
                 ],
@@ -180,4 +224,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+
+  InputDecoration _inputDecoration(String label) => InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white70),
+        filled: true,
+        fillColor: Colors.grey[900],
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.purple),
+        ),
+      );
 }

@@ -17,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final supabase = Supabase.instance.client;
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   late ScrollController _scrollController;
   double? _selectedLat;
   double? _selectedLng;
@@ -33,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -108,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onLocationSelected(Prediction prediction) {
     FocusScope.of(context).unfocus();
+    _searchFocusNode.unfocus();
     setState(() {
       _searchController.text = prediction.description ?? '';
       _selectedLat = double.tryParse(prediction.lat ?? '');
@@ -116,13 +119,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  InputDecoration _inputDecoration(String label) {
+  InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.white70),
+      hintText: hint,
+      hintStyle: const TextStyle(color: Colors.white70),
       filled: true,
       fillColor: const Color.fromARGB(255, 0, 0, 0),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Colors.white70),
@@ -138,8 +141,50 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildListingCard(Map<String, dynamic> listing) {
+    final images = listing['images'] ?? [];
+    final isFavorite = listing['is_favorite'] ?? false;
+    final listingId = listing['id'];
+    final userId = listing['user_id'];
+    final userEmail = listing['user_email'] ?? '';
+
+    return ListingCard(
+      title: listing['title'] ?? '',
+      location: listing['location'] ?? '',
+      rent: listing['rent']?.toString() ?? '',
+      availableFrom: listing['available_from'] ?? '',
+      images: images,
+      isFavorite: isFavorite,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ListingDetailScreen(
+              id: listingId,
+              title: listing['title'] ?? '',
+              location: listing['location'] ?? '',
+              rent: listing['rent']?.toString() ?? '',
+              availableFrom: listing['available_from'] ?? '',
+              availableTo: listing['available_to'],
+              description: listing['description'] ?? '',
+              gender: listing['gender'] ?? '',
+              images: images,
+              userId: userId,
+              userEmail: userEmail,
+            ),
+          ),
+        );
+      },
+      onFavoriteToggle: () {
+        toggleFavorite(listingId, isFavorite);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width > 800;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -149,101 +194,85 @@ class _HomeScreenState extends State<HomeScreen> {
         surfaceTintColor: Colors.black,
         leading: const Padding(
           padding: EdgeInsets.only(left: 16),
-          child: Icon(
-            Icons.house_rounded,
-            size: 36, 
-            color: Colors.purple,
-          ),
-        ), 
+          child: Icon(Icons.house_rounded, size: 36, color: Colors.purple),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.message, color: Colors.white),
             tooltip: 'Chats',
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ChatListScreen()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen()));
             },
           )
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: GooglePlaceAutoCompleteTextField(
-              textEditingController: _searchController,
-              googleAPIKey: "AIzaSyAhxj35WP_-sm_0C23hcQNYS5BqmNl09Cw",
-              inputDecoration: _inputDecoration('Search by city or address...'),
-              debounceTime: 400,
-              isLatLngRequired: true,
-              getPlaceDetailWithLatLng: _onLocationSelected,
-              itemClick: _onLocationSelected,
-              seperatedBuilder: const Divider(height: 1, color: Colors.grey),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: GooglePlaceAutoCompleteTextField(
+                    textEditingController: _searchController,
+                    focusNode: _searchFocusNode,
+                    googleAPIKey: "AIzaSyAhxj35WP_-sm_0C23hcQNYS5BqmNl09Cw",
+                    inputDecoration: _inputDecoration('Search by city or address...'),
+                    debounceTime: 400,
+                    isLatLngRequired: true,
+                    getPlaceDetailWithLatLng: _onLocationSelected,
+                    itemClick: (Prediction p) {
+                      _onLocationSelected(p);
+                      _searchFocusNode.unfocus();
+                    },
+                    seperatedBuilder: const Divider(height: 1, color: Colors.grey),
+                    textStyle: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _listingsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator(color: Colors.purple));
+                      } else if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red)));
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(child: Text('No listings found.', style: TextStyle(color: Colors.white)));
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: isWide
+                            ? GridView.builder(
+                                itemCount: _currentListings.length,
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  crossAxisSpacing: 20,
+                                  mainAxisSpacing: 20,
+                                  childAspectRatio: 4 / 3,
+                                ),
+                                itemBuilder: (_, index) => _buildListingCard(_currentListings[index]),
+                              )
+                            : ListView.builder(
+                                controller: _scrollController,
+                                itemCount: _currentListings.length,
+                                itemBuilder: (_, index) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: _buildListingCard(_currentListings[index]),
+                                ),
+                              ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _listingsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: Colors.purple));
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red)));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No listings found.', style: TextStyle(color: Colors.white)));
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _currentListings.length,
-                  itemBuilder: (context, index) {
-                    final listing = _currentListings[index];
-                    final images = listing['images'] ?? [];
-                    final isFavorite = listing['is_favorite'] ?? false;
-                    final listingId = listing['id'];
-                    final userId = listing['user_id'];
-                    final userEmail = listing['user_email'] ?? '';
-
-                    return ListingCard(
-                      title: listing['title'] ?? '',
-                      location: listing['location'] ?? '',
-                      rent: listing['rent']?.toString() ?? '',
-                      availableFrom: listing['available_from'] ?? '',
-                      images: images,
-                      isFavorite: isFavorite,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ListingDetailScreen(
-                              id: listingId,
-                              title: listing['title'] ?? '',
-                              location: listing['location'] ?? '',
-                              rent: listing['rent']?.toString() ?? '',
-                              availableFrom: listing['available_from'] ?? '',
-                              description: listing['description'] ?? '',
-                              gender: listing['gender'] ?? '',
-                              images: images,
-                              userId: userId,
-                              userEmail: userEmail,
-                            ),
-                          ),
-                        );
-                      },
-                      onFavoriteToggle: () {
-                        toggleFavorite(listingId, isFavorite);
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

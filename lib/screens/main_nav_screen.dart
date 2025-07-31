@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:lease_link_app/screens/add_listing/add_listing_screen.dart';
 import 'package:lease_link_app/screens/favorites/favorites_screen.dart';
-import 'add_listing/add_listing_screen.dart';
 import 'package:lease_link_app/screens/home/home_screen.dart';
-import 'my_listings/my_listings_screen.dart';
-import 'profile/profile_screen.dart';
+import 'package:lease_link_app/screens/my_listings/my_listings_screen.dart';
+import 'package:lease_link_app/screens/profile/profile_screen.dart';
+import 'package:lease_link_app/screens/auth/email_verification_screen.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({super.key});
@@ -14,6 +16,7 @@ class MainNavScreen extends StatefulWidget {
 
 class _MainNavScreenState extends State<MainNavScreen> {
   int _currentIndex = 0;
+  bool _hasCheckedVerification = false;
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -22,6 +25,32 @@ class _MainNavScreenState extends State<MainNavScreen> {
     FavoritesScreen(),
     ProfileScreen(),
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_hasCheckedVerification) {
+      _checkEmailVerification();
+      _hasCheckedVerification = true;
+    }
+  }
+
+  Future<void> _checkEmailVerification() async {
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user?.emailConfirmedAt == null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please verify your email to continue.")),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EmailVerificationScreen(email: user?.email ?? 'your email'),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +70,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: 'Home',
+            label: 'Explore',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box),
@@ -54,7 +83,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorites',
-        ),
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',

@@ -79,7 +79,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }).eq('id', userId);
 
     if (mounted) {
-      Navigator.pop(context); // Go back to profile screen
+      Navigator.pop(context);
     }
   }
 
@@ -92,74 +92,84 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = MediaQuery.of(context).size.width > 700;
+
+    final content = Form(
+      key: _formKey,
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: _pickImage,
+            child: CircleAvatar(
+              radius: 50,
+              backgroundColor: Colors.grey[800],
+              backgroundImage: _newImage != null
+                  ? FileImage(_newImage!)
+                  : (_existingImageUrl != null
+                      ? NetworkImage(_existingImageUrl!) as ImageProvider
+                      : null),
+              child: _newImage == null && _existingImageUrl == null
+                  ? const Icon(Icons.add_a_photo, color: Colors.white70)
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 20),
+          TextFormField(
+            controller: _nameController,
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration("Name"),
+            validator: (val) => val!.isEmpty ? "Required" : null,
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _ageController,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration("Age"),
+            validator: (val) => val!.isEmpty ? "Required" : null,
+          ),
+          const SizedBox(height: 14),
+          DropdownButtonFormField<String>(
+            value: _gender,
+            decoration: _inputDecoration("Gender"),
+            dropdownColor: Colors.black,
+            style: const TextStyle(color: Colors.white),
+            items: ['Male', 'Female', 'Other']
+                .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                .toList(),
+            onChanged: (val) => setState(() => _gender = val!),
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton(
+            onPressed: _saveProfile,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+            ),
+            child: const Text('Save', style: TextStyle(fontSize: 16)),
+          ),
+        ],
+      ),
+    );
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text('Edit Profile'),
         backgroundColor: Colors.black,
-        elevation: 0,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.purple))
-          : Padding(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.grey[800],
-                        backgroundImage: _newImage != null
-                            ? FileImage(_newImage!)
-                            : (_existingImageUrl != null
-                                ? NetworkImage(_existingImageUrl!) as ImageProvider
-                                : null),
-                        child: _newImage == null && _existingImageUrl == null
-                            ? const Icon(Icons.add_a_photo, color: Colors.white70)
-                            : null,
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: isWeb
+                  ? Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: content,
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _nameController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration("Name"),
-                      validator: (val) => val!.isEmpty ? "Required" : null,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _ageController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration("Age"),
-                      validator: (val) => val!.isEmpty ? "Required" : null,
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      value: _gender,
-                      decoration: _inputDecoration("Gender"),
-                      dropdownColor: Colors.black,
-                      style: const TextStyle(color: Colors.white),
-                      items: ['Male', 'Female', 'Other']
-                          .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-                          .toList(),
-                      onChanged: (val) => setState(() => _gender = val!),
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton(
-                      onPressed: _saveProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.purple,
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
-                      ),
-                      child: const Text('Save', style: TextStyle(fontSize: 16)),
-                    ),
-                  ],
-                ),
-              ),
+                    )
+                  : content,
             ),
     );
   }
